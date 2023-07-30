@@ -14,31 +14,42 @@ class PersonRepository implements PersonRepositoryInterface {
     return new Person(personModel.id, personModel.name, personModel.birthdate)
   }
 
-  async getAll(): Promise<Readable> {
+  async getAllStream(): Promise<Readable> {
     try {
       // Create a custom Readable stream
       const stream = new CustomReadableStream({ objectMode: true });
 
+      // const persons = await PersonModel.findAll();
+      // console.log('Results got from database');
+      // const converted = JSON.stringify(persons);
+      // console.log('Results got from database 2');
+      // stream.push(converted);
+      // stream.push(null);
+
+      // return stream;
+      /**Teste de steam abaixo */
       // Create a QueryStream with your custom query
       const query = 'SELECT * FROM person'; // Replace with your custom SQL query
-      console.log('Antes do PersonModel.createQueryStream')
       // @ts-ignore
       const queryStream = PersonModel.findAllWithStream(query);
-      console.log('Depois do PersonModel.createQueryStream')
 
       // // When the query stream emits a 'data' event, push the data to our custom Readable stream
       queryStream.on('data', (rows: any) => {
-        console.log('data CustomReadableStream:', rows )
         // Transform the raw result into the desired format (e.g., Person entity)
 
-        rows.map((row: any) => stream.push(JSON.stringify(new Person(row.id, row.name, row.birthdate))));
+        // rows.map((row: any) => stream.push(JSON.stringify(new Person(row.id, row.name, row.birthdate))));
         // Push the transformed entity to the custom stream
-        ;
+        const personEntities = rows.map((row: any) => new Person(row.id, row.name, row.birthdate));
+        
+        // Push each transformed entity to the custom stream as a JSON string
+        personEntities.forEach((personEntity: any) => {
+          const jsonString = JSON.stringify(personEntity);
+          stream.push(jsonString);
+        });
       });
 
       // // When the query stream emits an 'end' event, signal the end of our custom Readable stream
       queryStream.on('end', () => {
-        console.log('ended CustomReadableStream')
         stream.push(null); // Signal the end of the stream
       });
       // // Implement the _read() method to control when to read more data from the database
@@ -53,6 +64,18 @@ class PersonRepository implements PersonRepositoryInterface {
 
       // Return the custom Readable stream to the caller
       return stream;
+    } catch (error) {
+      console.log('Error here')
+      console.error(error)
+      console.log('Error here 2')
+      // Handle any errors
+      throw error;
+    }
+  }
+
+  getAll(): Promise<Person[]> {
+    try {
+      return PersonModel.findAll();
     } catch (error) {
       console.log('Error here')
       console.error(error)
